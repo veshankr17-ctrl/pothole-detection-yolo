@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Detection</title>
+    <link rel="stylesheet" href="./assets/css/style.css" />
+    <style>
+      .camera-wrap { position: relative; width: 100%; max-width: 760px; margin: auto; overflow: hidden; }
+      video, canvas { width: 100%; border-radius: 12px; display: block; }
+      canvas { position: absolute; left: 0; top: 0; pointer-events: none; }
+      .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>Live Detection</h2>
+      <nav>
+        <a href="./index.html">Home</a>
+        <a href="./detect.html">Live Detection</a>
+        <a href="./upload.html">Upload Detection</a>
+        <a href="./map.html">Map</a>
+        <a href="./reports.html">Reports</a>
+      </nav>
+    </header>
+    <main>
+      <div class="card">
+        <h3 class="section-title">Live Camera Detection</h3>
+        <p class="muted">Use live camera for continuous pothole detection and auto report saving.</p>
+        <label for="confidence-range">Detection Confidence Threshold: <span id="confidence-value">0.50</span></label>
+        <input id="confidence-range" type="range" min="0.35" max="0.9" step="0.01" value="0.5" />
+        <div class="controls">
+          <button class="btn" id="start-btn">Start Detection</button>
+          <button class="btn secondary" id="stop-btn">Stop</button>
+        </div>
+        <p id="detect-state" class="status">Waiting to start...</p>
+        <p id="gps-state" class="status">GPS not started</p>
+        <p id="save-state" class="status">No report saved yet</p>
+      </div>
+      <div class="camera-wrap card">
+        <video id="camera" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </div>
+    </main>
+    <script src="./assets/js/api.js"></script>
+    <script src="./assets/js/detect.js"></script>
+  </body>
+</html>

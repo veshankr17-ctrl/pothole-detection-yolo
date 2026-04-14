@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pothole Map</title>
+    <link rel="stylesheet" href="./assets/css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <style>
+      #map { height: 74vh; border-radius: 12px; }
+      .leaflet-popup-content-wrapper { border-radius: 10px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>Pothole Map</h2>
+      <nav>
+        <a href="./index.html">Home</a>
+        <a href="./detect.html">Live Detection</a>
+        <a href="./upload.html">Upload Detection</a>
+        <a href="./map.html">Map</a>
+        <a href="./reports.html">Reports</a>
+      </nav>
+    </header>
+    <main>
+      <div class="card">
+        <h3 class="section-title">City Road Risk Map</h3>
+        <p class="muted">Large map view with auto-generated pothole markers from saved detections.</p>
+        <p id="map-status">Loading map points...</p>
+      </div>
+      <div class="map-shell">
+        <div id="map"></div>
+        <div class="map-side">
+          <div class="mini">
+            <h3 class="section-title">Map Insights</h3>
+            <p class="muted">Live stats from saved pothole reports.</p>
+          </div>
+          <div class="mini">
+            <div><b>Total Markers:</b> <span id="total-markers">0</span></div>
+            <div><b>Avg Confidence:</b> <span id="avg-confidence">0%</span></div>
+            <div><b>Latest Detection:</b> <span id="latest-time">N/A</span></div>
+          </div>
+          <div class="mini">
+            <h3 class="section-title">How to Read</h3>
+            <p class="muted">Click marker to see photo, confidence, timestamp, and report id.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="./assets/js/api.js"></script>
+    <script src="./assets/js/map.js"></script>
+  </body>
+</html>
