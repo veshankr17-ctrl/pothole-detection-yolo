@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pothole Reports</title>
+    <link rel="stylesheet" href="./assets/css/style.css" />
+  </head>
+  <body>
+    <header>
+      <h2>Pothole Reports</h2>
+      <nav>
+        <a href="./index.html">Home</a>
+        <a href="./detect.html">Live Detection</a>
+        <a href="./upload.html">Upload Detection</a>
+        <a href="./map.html">Map</a>
+        <a href="./reports.html">Reports</a>
+      </nav>
+    </header>
+    <main>
+      <div class="card">
+        <h3 class="section-title">Pothole Reports Archive</h3>
+        <p class="muted">Every saved pothole event with confidence, timestamp, location and captured image is listed below.</p>
+        <input id="report-search" placeholder="Search by report ID..." />
+      </div>
+      <div id="reports" class="grid"></div>
+    </main>
+    <script src="./assets/js/api.js"></script>
+    <script src="./assets/js/reports.js"></script>
+  </body>
+</html>

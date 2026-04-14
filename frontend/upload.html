@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Detection</title>
+    <link rel="stylesheet" href="./assets/css/style.css" />
+    <style>
+      .upload-wrap { position: relative; width: 100%; max-width: 820px; margin: auto; overflow: hidden; }
+      #upload-preview, #upload-overlay { width: 100%; border-radius: 12px; display: none; }
+      #upload-overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
+      .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+      .file-input { width: 100%; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>Upload Image Detection</h2>
+      <nav>
+        <a href="./index.html">Home</a>
+        <a href="./detect.html">Live Detection</a>
+        <a href="./upload.html">Upload Detection</a>
+        <a href="./map.html">Map</a>
+        <a href="./reports.html">Reports</a>
+      </nav>
+    </header>
+    <main>
+      <div class="card">
+        <h3 class="section-title">Detect from Device Image</h3>
+        <p class="muted">Upload an image, run pothole detection, and save it with your current location for map/report tracking.</p>
+        <label for="upload-confidence-range">Detection Confidence Threshold: <span id="upload-confidence-value">0.50</span></label>
+        <input id="upload-confidence-range" type="range" min="0.35" max="0.9" step="0.01" value="0.5" />
+        <input id="upload-input" class="file-input" type="file" accept="image/*" />
+        <div class="controls" style="margin-top:12px;">
+          <button class="btn" id="detect-upload-btn">Detect Uploaded Image</button>
+          <button class="btn secondary" id="save-upload-btn" disabled>Save Upload Report</button>
+        </div>
+        <p id="gps-state" class="status">GPS not started</p>
+        <p id="upload-state" class="status">No uploaded image selected.</p>
+      </div>
+      <div class="upload-wrap card">
+        <img id="upload-preview" alt="Uploaded preview" />
+        <canvas id="upload-overlay"></canvas>
+      </div>
+    </main>
+    <script src="./assets/js/api.js"></script>
+    <script src="./assets/js/upload.js"></script>
+  </body>
+</html>
