@@ -105,7 +105,8 @@ uploadInput.addEventListener("change", async () => {
     return;
   }
   try {
-    uploadedImageBase64 = await fileToBase64(file);
+    const raw = await fileToBase64(file);
+    uploadedImageBase64 = await compressDataUrlForApi(raw);
     uploadedDetectionResult = null;
     saveUploadBtn.disabled = true;
     uploadPreview.src = uploadedImageBase64;
@@ -125,11 +126,12 @@ detectUploadBtn.addEventListener("click", async () => {
     return;
   }
   if (!uploadedImageBase64) {
-    uploadedImageBase64 = await fileToBase64(selectedFile);
+    uploadedImageBase64 = await compressDataUrlForApi(await fileToBase64(selectedFile));
   }
   try {
+    const imagePayload = await compressDataUrlForApi(uploadedImageBase64);
     const result = await apiPost("/predict", {
-      image_base64: uploadedImageBase64,
+      image_base64: imagePayload,
       confidence_threshold: getThreshold(),
     });
     uploadedDetectionResult = result;
@@ -141,8 +143,9 @@ detectUploadBtn.addEventListener("click", async () => {
       saveUploadBtn.disabled = true;
       setText(uploadStateEl, "No pothole detected in uploaded image.", "ok");
     }
-  } catch {
-    setText(uploadStateEl, "Upload detection failed. Check backend/API.", "err");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    setText(uploadStateEl, `Upload detection failed: ${msg.slice(0, 160)}`, "err");
   }
 });
 

@@ -24,10 +24,11 @@ MODEL_PATH = BASE_DIR / "models" / "best.pt"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Pothole Detection API", version="1.0.0")
+# allow_credentials=True with allow_origins=["*"] is invalid for browsers; fetch from Netlify would fail CORS.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

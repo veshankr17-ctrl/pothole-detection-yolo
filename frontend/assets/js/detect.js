@@ -215,7 +215,7 @@ if (uploadInput && uploadPreview && uploadOverlay && uploadStateEl && detectUplo
       return;
     }
     try {
-      uploadedImageBase64 = await fileToBase64(file);
+      uploadedImageBase64 = await compressDataUrlForApi(await fileToBase64(file));
       uploadPreview.src = uploadedImageBase64;
       uploadPreview.style.display = "block";
       uploadOverlay.style.display = "block";
@@ -237,15 +237,16 @@ if (uploadInput && uploadPreview && uploadOverlay && uploadStateEl && detectUplo
     }
     if (!uploadedImageBase64) {
       try {
-        uploadedImageBase64 = await fileToBase64(selectedFile);
+        uploadedImageBase64 = await compressDataUrlForApi(await fileToBase64(selectedFile));
       } catch {
         setText(uploadStateEl, "Could not read selected image.", "err");
         return;
       }
     }
     try {
+      const imagePayload = await compressDataUrlForApi(uploadedImageBase64);
       const result = await apiPost("/predict", {
-        image_base64: uploadedImageBase64,
+        image_base64: imagePayload,
         confidence_threshold: getThreshold(),
       });
       uploadedDetectionResult = result;
@@ -262,8 +263,9 @@ if (uploadInput && uploadPreview && uploadOverlay && uploadStateEl && detectUplo
         saveUploadBtn.disabled = true;
         setText(uploadStateEl, "No pothole detected in uploaded image.", "ok");
       }
-    } catch {
-      setText(uploadStateEl, "Upload detection failed. Check backend/API.", "err");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setText(uploadStateEl, `Upload detection failed: ${msg.slice(0, 160)}`, "err");
     }
   });
 
