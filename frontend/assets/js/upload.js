@@ -92,8 +92,9 @@ async function saveUploadedReport() {
   try {
     const result = await apiPost("/reports", payload);
     setText(uploadStateEl, `Uploaded report saved: ${result.report_id}`, "ok");
-  } catch {
-    setText(uploadStateEl, "Failed to save uploaded report.", "err");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    setText(uploadStateEl, `Failed to save uploaded report: ${msg.slice(0, 120)}`, "err");
   }
 }
 
@@ -129,9 +130,8 @@ detectUploadBtn.addEventListener("click", async () => {
     uploadedImageBase64 = await compressDataUrlForApi(await fileToBase64(selectedFile));
   }
   try {
-    const imagePayload = await compressDataUrlForApi(uploadedImageBase64);
     const result = await apiPost("/predict", {
-      image_base64: imagePayload,
+      image_base64: uploadedImageBase64,
       confidence_threshold: getThreshold(),
     });
     uploadedDetectionResult = result;
@@ -145,7 +145,11 @@ detectUploadBtn.addEventListener("click", async () => {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    setText(uploadStateEl, `Upload detection failed: ${msg.slice(0, 160)}`, "err");
+    if (msg.toLowerCase().includes("abort")) {
+      setText(uploadStateEl, "Upload prediction timed out on free server. Try smaller image or lower quality.", "warn");
+    } else {
+      setText(uploadStateEl, `Upload detection failed: ${msg.slice(0, 160)}`, "err");
+    }
   }
 });
 

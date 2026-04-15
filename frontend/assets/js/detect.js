@@ -120,8 +120,16 @@ function startLocationTracking() {
 }
 
 async function saveReport(imageBase64, detectionResult) {
+  if (!detectionResult?.detections?.length) {
+    setText(saveEl, "Waiting for pothole detection...", "warn");
+    return;
+  }
   const now = Date.now();
-  if (now - lastSavedAt < SAVE_COOLDOWN_MS || detectionResult.max_confidence < 0.55) return;
+  if (now - lastSavedAt < SAVE_COOLDOWN_MS) {
+    const waitSec = Math.ceil((SAVE_COOLDOWN_MS - (now - lastSavedAt)) / 1000);
+    setText(saveEl, `Cooldown active. Next auto-save in ${waitSec}s`, "warn");
+    return;
+  }
   lastSavedAt = now;
   const payload = {
     image_base64: imageBase64,
@@ -133,8 +141,9 @@ async function saveReport(imageBase64, detectionResult) {
   try {
     const result = await apiPost("/reports", payload);
     setText(saveEl, `Saved report: ${result.report_id}`, "ok");
-  } catch {
-    setText(saveEl, "Failed to save report", "err");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    setText(saveEl, `Failed to save report: ${msg.slice(0, 120)}`, "err");
   }
 }
 
@@ -177,8 +186,13 @@ async function detectionLoop() {
       } else {
         setText(stateEl, "No pothole detected", "ok");
       }
-    } catch {
-      setText(stateEl, "Prediction error. Check backend URL/API.", "err");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.toLowerCase().includes("abort")) {
+        setText(stateEl, "Prediction timed out on free server. Retrying...", "warn");
+      } else {
+        setText(stateEl, `Prediction error: ${msg.slice(0, 120)}`, "err");
+      }
     }
     await new Promise((r) => setTimeout(r, FRAME_INTERVAL_MS));
   }

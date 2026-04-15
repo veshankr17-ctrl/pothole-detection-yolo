@@ -2,7 +2,7 @@ const DEFAULT_API_BASE_URL = "https://pothole-detection-yolo.onrender.com";
 const API_BASE_URL = localStorage.getItem("API_BASE_URL") || DEFAULT_API_BASE_URL;
 
 /** Downscale large camera/phone images so JSON + YOLO on Render free tier does not time out. */
-function compressDataUrlForApi(dataUrl, maxSide = 1280, quality = 0.82) {
+function compressDataUrlForApi(dataUrl, maxSide = 960, quality = 0.72) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -32,11 +32,19 @@ function compressDataUrlForApi(dataUrl, maxSide = 1280, quality = 0.82) {
 }
 
 async function apiPost(path, body) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 50000);
+  let res;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!res.ok) {
     throw new Error(await res.text());
   }
