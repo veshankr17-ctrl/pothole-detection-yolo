@@ -3,7 +3,7 @@ const DIRECT_RENDER_API_BASE_URL = "https://pothole-detection-yolo.onrender.com"
 const NETWORK_TIMEOUT_MS = 50000;
 const TRANSIENT_WAIT_MS = 2200;
 const LOCAL_REPORTS_KEY = "LOCAL_POTHOLE_REPORTS_V1";
-const FAST_PREDICT_TIMEOUT_MS = 6500;
+const FAST_PREDICT_TIMEOUT_MS = 8000;
 let API_BASE_URL = resolveApiBaseUrl();
 
 function delay(ms) {
@@ -161,15 +161,27 @@ function getLocalReports() {
 }
 
 function setLocalReports(reports) {
-  localStorage.setItem(LOCAL_REPORTS_KEY, JSON.stringify(reports.slice(0, 250)));
+  const trimmed = reports.slice(0, 120);
+  while (trimmed.length >= 0) {
+    try {
+      localStorage.setItem(LOCAL_REPORTS_KEY, JSON.stringify(trimmed));
+      return;
+    } catch {
+      if (!trimmed.length) {
+        throw new Error("Local storage full; could not save fallback report");
+      }
+      trimmed.pop();
+    }
+  }
 }
 
-function saveLocalReport(payload) {
+async function saveLocalReport(payload) {
   const localReports = getLocalReports();
+  const compactImage = await compressDataUrlForApi(payload.image_base64, 720, 0.58);
   const reportId = `local-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
   const report = {
     id: reportId,
-    image_path: payload.image_base64,
+    image_path: compactImage,
     confidence: payload.confidence,
     detections_count: payload.detections_count,
     latitude: payload.latitude ?? null,
@@ -318,7 +330,7 @@ async function runLocalHeuristicDetection(imageBase64, threshold = 0.35) {
   }
 
   detections.sort((a, b) => b.confidence - a.confidence);
-  let top = detections.slice(0, 8);
+  let top = detections.slice(0, 3);
   if (!top.length && bestDensity > 0.2) {
     const cy = Math.floor(bestCellIndex / cols);
     const cx = bestCellIndex % cols;
@@ -389,14 +401,11 @@ async function predictViaApiFast(imageBase64, confidenceThreshold) {
 }
 
 async function predictPothole(imageBase64, confidenceThreshold) {
-  const localResult = await runLocalHeuristicDetection(imageBase64, confidenceThreshold);
-  if (localResult.has_pothole) {
-    return localResult;
-  }
   try {
-    return await predictViaApiFast(imageBase64, confidenceThreshold);
+    const apiResult = await predictViaApiFast(imageBase64, confidenceThreshold);
+    return { ...apiResult, is_fallback: false };
   } catch {
-    return localResult;
+    return runLocalHeuristicDetection(imageBase64, confidenceThreshold);
   }
 }
 
@@ -404,7 +413,7 @@ async function saveReportData(payload) {
   try {
     return await apiPost("/reports", payload);
   } catch {
-    return saveLocalReport(payload);
+    return await saveLocalReport(payload);
   }
 }
 
