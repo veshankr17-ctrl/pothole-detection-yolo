@@ -1,4 +1,5 @@
-const DEFAULT_API_BASE_URL = "/api";
+const LOCAL_DEV_API_BASE_URL = "http://127.0.0.1:8000";
+const DEFAULT_API_BASE_URL = getDefaultApiBaseUrl();
 const DIRECT_RENDER_API_BASE_URL = "https://pothole-detection-yolo.onrender.com";
 const NETWORK_TIMEOUT_MS = 50000;
 const TRANSIENT_WAIT_MS = 2200;
@@ -6,6 +7,14 @@ const LOCAL_REPORTS_KEY = "LOCAL_POTHOLE_REPORTS_V1";
 const FAST_PREDICT_TIMEOUT_MS = 8000;
 const ENABLE_HEURISTIC_FALLBACK = window.location.search.includes("fallback=1");
 let API_BASE_URL = resolveApiBaseUrl();
+
+function getDefaultApiBaseUrl() {
+  const host = window.location.hostname;
+  if (host === "127.0.0.1" || host === "localhost") {
+    return LOCAL_DEV_API_BASE_URL;
+  }
+  return "/api";
+}
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
