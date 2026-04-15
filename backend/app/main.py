@@ -103,7 +103,8 @@ def decode_image(image_base64: str) -> np.ndarray:
 def run_detection(image: np.ndarray, threshold: float) -> dict[str, Any]:
     image_h, image_w = image.shape[:2]
     image_area = float(image_w * image_h)
-    results = model.predict(source=image, conf=threshold, iou=0.5, verbose=False)
+    # Keep inference lighter on Render free CPU and reduce timeouts.
+    results = model.predict(source=image, conf=threshold, iou=0.45, imgsz=640, max_det=12, verbose=False)
     detections: list[dict[str, Any]] = []
     rejected_count = 0
     max_conf = 0.0
@@ -117,8 +118,8 @@ def run_detection(image: np.ndarray, threshold: float) -> dict[str, Any]:
         area_ratio = (width * height) / image_area
         aspect_ratio = width / height
 
-        # Practical filter to reduce false positives from unrelated objects.
-        if area_ratio < 0.0008 or area_ratio > 0.35 or aspect_ratio > 7.0 or aspect_ratio < 0.2:
+        # Balanced filter: still suppress obvious noise, but keep elongated crack-like potholes.
+        if area_ratio < 0.0005 or area_ratio > 0.65 or aspect_ratio > 20.0 or aspect_ratio < 0.05:
             rejected_count += 1
             continue
 

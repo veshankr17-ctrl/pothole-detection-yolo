@@ -130,6 +130,8 @@ detectUploadBtn.addEventListener("click", async () => {
     uploadedImageBase64 = await compressDataUrlForApi(await fileToBase64(selectedFile));
   }
   try {
+    detectUploadBtn.disabled = true;
+    setText(uploadStateEl, "Running detection... please wait (free server can be slow).", "warn");
     const result = await apiPost("/predict", {
       image_base64: uploadedImageBase64,
       confidence_threshold: getThreshold(),
@@ -150,6 +152,8 @@ detectUploadBtn.addEventListener("click", async () => {
     } else {
       setText(uploadStateEl, `Upload detection failed: ${msg.slice(0, 160)}`, "err");
     }
+  } finally {
+    detectUploadBtn.disabled = false;
   }
 });
 
