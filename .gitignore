@@ -1,12 +1,13 @@
 ﻿.venv/
 .venv-train/
 backend/.venv/
+backend/.venv310/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 *.db
 *.sqlite3
-uploads/
+backend/uploads/
 archive (3)/
 backend/models/

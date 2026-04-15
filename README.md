@@ -97,8 +97,8 @@ python scripts\copy_best_model.py
 
 ```powershell
 cd backend
-python -m venv .venv
-.\.venv\Scripts\activate
+python -m venv .venv310
+.\.venv310\Scripts\activate
 pip install -r requirements.txt
 ```
 
