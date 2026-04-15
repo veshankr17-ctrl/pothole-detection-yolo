@@ -139,8 +139,9 @@ async function saveReport(imageBase64, detectionResult) {
     ...latestLocation,
   };
   try {
-    const result = await apiPost("/reports", payload);
-    setText(saveEl, `Saved report: ${result.report_id}`, "ok");
+    const result = await saveReportData(payload);
+    const mode = result?.is_fallback ? " (local fallback)" : "";
+    setText(saveEl, `Saved report: ${result.report_id}${mode}`, "ok");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     setText(saveEl, `Failed to save report: ${msg.slice(0, 120)}`, "err");
@@ -175,16 +176,15 @@ async function detectionLoop() {
     }
     const imageBase64 = getFrameBase64();
     try {
-      const result = await apiPost("/predict", {
-        image_base64: imageBase64,
-        confidence_threshold: getThreshold(),
-      });
+      const result = await predictPothole(imageBase64, getThreshold());
       drawDetections(result.detections);
       if (result.has_pothole) {
-        setText(stateEl, `Pothole detected (${Math.round(result.max_confidence * 100)}%)`, "warn");
+        const mode = result?.is_fallback ? " [local detector]" : "";
+        setText(stateEl, `Pothole detected (${Math.round(result.max_confidence * 100)}%)${mode}`, "warn");
         await saveReport(imageBase64, result);
       } else {
-        setText(stateEl, "No pothole detected", "ok");
+        const mode = result?.is_fallback ? " (local detector active)" : "";
+        setText(stateEl, `No pothole detected${mode}`, "ok");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

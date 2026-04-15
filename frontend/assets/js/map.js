@@ -6,7 +6,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 }).addTo(map);
 
 async function loadPoints() {
-  const points = await apiGet("/map-points");
+  const points = await fetchMapPointsMerged();
   if (!points.length) {
     document.getElementById("map-status").textContent = "No markers yet. Save reports from detection pages.";
     return;
@@ -21,7 +21,7 @@ async function loadPoints() {
       fillColor: "#38bdf8",
       fillOpacity: 0.7,
     }).addTo(map);
-    const imageUrl = `${API_BASE_URL}${p.image_path}`;
+    const imageUrl = getImageUrl(p.image_path);
     marker.bindPopup(`
       <div style="min-width:220px;">
         <b>Report:</b> ${p.id}<br />

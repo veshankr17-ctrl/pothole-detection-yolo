@@ -90,8 +90,9 @@ async function saveUploadedReport() {
     ...latestLocation,
   };
   try {
-    const result = await apiPost("/reports", payload);
-    setText(uploadStateEl, `Uploaded report saved: ${result.report_id}`, "ok");
+    const result = await saveReportData(payload);
+    const mode = result?.is_fallback ? " (local fallback)" : "";
+    setText(uploadStateEl, `Uploaded report saved: ${result.report_id}${mode}`, "ok");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     setText(uploadStateEl, `Failed to save uploaded report: ${msg.slice(0, 120)}`, "err");
@@ -132,18 +133,17 @@ detectUploadBtn.addEventListener("click", async () => {
   try {
     detectUploadBtn.disabled = true;
     setText(uploadStateEl, "Running detection... please wait (free server can be slow).", "warn");
-    const result = await apiPost("/predict", {
-      image_base64: uploadedImageBase64,
-      confidence_threshold: getThreshold(),
-    });
+    const result = await predictPothole(uploadedImageBase64, getThreshold());
     uploadedDetectionResult = result;
     setTimeout(() => drawUploadDetections(result.detections), 80);
     if (result.has_pothole) {
       saveUploadBtn.disabled = false;
-      setText(uploadStateEl, `Pothole detected (${Math.round(result.max_confidence * 100)}%). Click save.`, "warn");
+      const mode = result?.is_fallback ? " [local detector]" : "";
+      setText(uploadStateEl, `Pothole detected (${Math.round(result.max_confidence * 100)}%)${mode}. Click save.`, "warn");
     } else {
       saveUploadBtn.disabled = true;
-      setText(uploadStateEl, "No pothole detected in uploaded image.", "ok");
+      const mode = result?.is_fallback ? " (local detector active)" : "";
+      setText(uploadStateEl, `No pothole detected in uploaded image${mode}.`, "ok");
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

@@ -9,7 +9,7 @@ function renderReports(reports) {
   }
   reportsContainer.innerHTML = reports
     .map((r) => {
-      const imageUrl = `${API_BASE_URL}${r.image_path}`;
+      const imageUrl = getImageUrl(r.image_path);
       return `
         <div class="card report-card">
           <p><b>Report ID:</b> ${r.id}</p>
@@ -24,7 +24,7 @@ function renderReports(reports) {
 }
 
 async function loadReports() {
-  allReports = await apiGet("/reports");
+  allReports = await fetchReportsMerged();
   renderReports(allReports);
 }
 
