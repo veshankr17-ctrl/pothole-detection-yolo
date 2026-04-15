@@ -3,6 +3,7 @@ const DIRECT_RENDER_API_BASE_URL = "https://pothole-detection-yolo.onrender.com"
 const NETWORK_TIMEOUT_MS = 50000;
 const TRANSIENT_WAIT_MS = 2200;
 const LOCAL_REPORTS_KEY = "LOCAL_POTHOLE_REPORTS_V1";
+const FAST_PREDICT_TIMEOUT_MS = 6500;
 let API_BASE_URL = resolveApiBaseUrl();
 
 function delay(ms) {
@@ -228,6 +229,8 @@ async function runLocalHeuristicDetection(imageBase64, threshold = 0.35) {
   const rows = Math.ceil(h / cell);
   const active = new Uint8Array(cols * rows);
   const density = new Float32Array(cols * rows);
+  let bestDensity = 0;
+  let bestCellIndex = 0;
 
   for (let cy = 0; cy < rows; cy++) {
     for (let cx = 0; cx < cols; cx++) {
@@ -247,7 +250,11 @@ async function runLocalHeuristicDetection(imageBase64, threshold = 0.35) {
       const ratio = total ? dark / total : 0;
       const ci = cy * cols + cx;
       density[ci] = ratio;
-      if (ratio > 0.24) active[ci] = 1;
+      if (ratio > bestDensity) {
+        bestDensity = ratio;
+        bestCellIndex = ci;
+      }
+      if (ratio > 0.18) active[ci] = 1;
     }
   }
 
@@ -294,7 +301,7 @@ async function runLocalHeuristicDetection(imageBase64, threshold = 0.35) {
     const bh = Math.max(1, y2 - y1);
     const areaRatio = (bw * bh) / imageArea;
     const aspect = bw / bh;
-    if (count < 4 || areaRatio < 0.0008 || areaRatio > 0.55 || aspect > 18 || aspect < 0.06) continue;
+    if (count < 2 || areaRatio < 0.0005 || areaRatio > 0.75 || aspect > 25 || aspect < 0.04) continue;
 
     const darkRatio = weight / Math.max(1, count);
     const conf = Math.max(threshold, Math.min(0.91, 0.28 + darkRatio * 0.9 + areaRatio * 0.55));
@@ -311,7 +318,32 @@ async function runLocalHeuristicDetection(imageBase64, threshold = 0.35) {
   }
 
   detections.sort((a, b) => b.confidence - a.confidence);
-  const top = detections.slice(0, 8);
+  let top = detections.slice(0, 8);
+  if (!top.length && bestDensity > 0.2) {
+    const cy = Math.floor(bestCellIndex / cols);
+    const cx = bestCellIndex % cols;
+    const minCx = Math.max(0, cx - 2);
+    const maxCx = Math.min(cols - 1, cx + 2);
+    const minCy = Math.max(0, cy - 2);
+    const maxCy = Math.min(rows - 1, cy + 2);
+    const x1 = minCx * cell;
+    const y1 = minCy * cell;
+    const x2 = Math.min(w, (maxCx + 1) * cell);
+    const y2 = Math.min(h, (maxCy + 1) * cell);
+    const areaRatio = ((x2 - x1) * (y2 - y1)) / imageArea;
+    top = [
+      {
+        x1: Number((x1 / scale).toFixed(2)),
+        y1: Number((y1 / scale).toFixed(2)),
+        x2: Number((x2 / scale).toFixed(2)),
+        y2: Number((y2 / scale).toFixed(2)),
+        confidence: Number(Math.max(threshold, Math.min(0.72, 0.24 + bestDensity)).toFixed(4)),
+        class_id: 0,
+        class_name: "pothole",
+        area_ratio: Number(areaRatio.toFixed(6)),
+      },
+    ];
+  }
   return {
     has_pothole: top.length > 0,
     max_confidence: top.length ? top[0].confidence : 0,
@@ -321,14 +353,50 @@ async function runLocalHeuristicDetection(imageBase64, threshold = 0.35) {
   };
 }
 
+async function predictViaApiFast(imageBase64, confidenceThreshold) {
+  const urlsToTry =
+    API_BASE_URL === DEFAULT_API_BASE_URL
+      ? [API_BASE_URL, DIRECT_RENDER_API_BASE_URL]
+      : [API_BASE_URL, DEFAULT_API_BASE_URL, DIRECT_RENDER_API_BASE_URL];
+  let lastErr = null;
+  for (const baseUrl of urlsToTry) {
+    try {
+      const res = await fetchWithTimeout(
+        `${baseUrl}/predict`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image_base64: imageBase64,
+            confidence_threshold: confidenceThreshold,
+          }),
+        },
+        FAST_PREDICT_TIMEOUT_MS
+      );
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+      if (baseUrl !== API_BASE_URL) {
+        API_BASE_URL = baseUrl;
+        localStorage.setItem("API_BASE_URL", baseUrl);
+      }
+      return await res.json();
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr || "predict failed"));
+}
+
 async function predictPothole(imageBase64, confidenceThreshold) {
+  const localResult = await runLocalHeuristicDetection(imageBase64, confidenceThreshold);
+  if (localResult.has_pothole) {
+    return localResult;
+  }
   try {
-    return await apiPost("/predict", {
-      image_base64: imageBase64,
-      confidence_threshold: confidenceThreshold,
-    });
+    return await predictViaApiFast(imageBase64, confidenceThreshold);
   } catch {
-    return runLocalHeuristicDetection(imageBase64, confidenceThreshold);
+    return localResult;
   }
 }
 
