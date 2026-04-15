@@ -4,6 +4,7 @@ const NETWORK_TIMEOUT_MS = 50000;
 const TRANSIENT_WAIT_MS = 2200;
 const LOCAL_REPORTS_KEY = "LOCAL_POTHOLE_REPORTS_V1";
 const FAST_PREDICT_TIMEOUT_MS = 8000;
+const ENABLE_HEURISTIC_FALLBACK = window.location.search.includes("fallback=1");
 let API_BASE_URL = resolveApiBaseUrl();
 
 function delay(ms) {
@@ -405,7 +406,13 @@ async function predictPothole(imageBase64, confidenceThreshold) {
     const apiResult = await predictViaApiFast(imageBase64, confidenceThreshold);
     return { ...apiResult, is_fallback: false };
   } catch {
-    return runLocalHeuristicDetection(imageBase64, confidenceThreshold);
+    if (ENABLE_HEURISTIC_FALLBACK) {
+      return runLocalHeuristicDetection(imageBase64, confidenceThreshold);
+    }
+    throw new Error(
+      "Backend model server is unavailable. Start local backend or restore hosted backend. " +
+        "Use '?fallback=1' only if you want heuristic demo mode."
+    );
   }
 }
 
