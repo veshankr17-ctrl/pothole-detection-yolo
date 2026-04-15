@@ -107,10 +107,8 @@ async function apiPost(path, body) {
       return res.json();
     } catch (err) {
       lastError = err;
-      // Try fallback URL only when failure is network-level or current URL is non-default.
-      if (!isNetworkLevelError(err) && baseUrl === DEFAULT_API_BASE_URL) {
-        break;
-      }
+      // Always continue to next fallback URL; /api may fail if proxy isn't active yet.
+      continue;
     }
   }
   const errMsg = lastError instanceof Error ? lastError.message : String(lastError || "Unknown request error");
