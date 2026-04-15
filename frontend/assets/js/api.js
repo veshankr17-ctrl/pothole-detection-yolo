@@ -1,4 +1,5 @@
-const DEFAULT_API_BASE_URL = "https://pothole-detection-yolo.onrender.com";
+const DEFAULT_API_BASE_URL = "/api";
+const DIRECT_RENDER_API_BASE_URL = "https://pothole-detection-yolo.onrender.com";
 const NETWORK_TIMEOUT_MS = 50000;
 const TRANSIENT_WAIT_MS = 2200;
 let API_BASE_URL = resolveApiBaseUrl();
@@ -9,6 +10,7 @@ function delay(ms) {
 
 function sanitizeBaseUrl(rawUrl) {
   if (!rawUrl) return null;
+  if (rawUrl.startsWith("/")) return rawUrl.replace(/\/+$/, "");
   try {
     const parsed = new URL(rawUrl);
     if (window.location.protocol === "https:" && parsed.protocol !== "https:") {
@@ -75,7 +77,9 @@ function compressDataUrlForApi(dataUrl, maxSide = 960, quality = 0.72) {
 
 async function apiPost(path, body) {
   const urlsToTry =
-    API_BASE_URL === DEFAULT_API_BASE_URL ? [API_BASE_URL] : [API_BASE_URL, DEFAULT_API_BASE_URL];
+    API_BASE_URL === DEFAULT_API_BASE_URL
+      ? [API_BASE_URL, DIRECT_RENDER_API_BASE_URL]
+      : [API_BASE_URL, DEFAULT_API_BASE_URL, DIRECT_RENDER_API_BASE_URL];
   let lastError = null;
   for (const baseUrl of urlsToTry) {
     try {
@@ -115,23 +119,32 @@ async function apiPost(path, body) {
 
 async function apiGet(path) {
   let res;
-  try {
-    res = await fetchWithTimeout(`${API_BASE_URL}${path}`, { method: "GET" });
-    if (res.status === 502 || res.status === 503 || res.status === 504) {
-      await delay(TRANSIENT_WAIT_MS);
-      res = await fetchWithTimeout(`${API_BASE_URL}${path}`, { method: "GET" });
-    }
-  } catch (err) {
-    if (API_BASE_URL !== DEFAULT_API_BASE_URL && isNetworkLevelError(err)) {
-      API_BASE_URL = DEFAULT_API_BASE_URL;
-      localStorage.setItem("API_BASE_URL", API_BASE_URL);
-      res = await fetchWithTimeout(`${API_BASE_URL}${path}`, { method: "GET" });
-    } else {
-      throw err;
+  const urlsToTry =
+    API_BASE_URL === DEFAULT_API_BASE_URL
+      ? [API_BASE_URL, DIRECT_RENDER_API_BASE_URL]
+      : [API_BASE_URL, DEFAULT_API_BASE_URL, DIRECT_RENDER_API_BASE_URL];
+  let lastErr = null;
+  for (const baseUrl of urlsToTry) {
+    try {
+      res = await fetchWithTimeout(`${baseUrl}${path}`, { method: "GET" });
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        await delay(TRANSIENT_WAIT_MS);
+        res = await fetchWithTimeout(`${baseUrl}${path}`, { method: "GET" });
+      }
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+      if (baseUrl !== API_BASE_URL) {
+        API_BASE_URL = baseUrl;
+        localStorage.setItem("API_BASE_URL", API_BASE_URL);
+      }
+      return res.json();
+    } catch (err) {
+      lastErr = err;
+      if (!isNetworkLevelError(err) && baseUrl !== DEFAULT_API_BASE_URL) {
+        break;
+      }
     }
   }
-  if (!res.ok) {
-    throw new Error(await res.text());
-  }
-  return res.json();
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr || "API get failed"));
 }
